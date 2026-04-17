@@ -1,5 +1,5 @@
 ## Live Demo
-https://michaelw2390.github.io/CloudTrail-Incident-Explainer/
+[https://michaelw2390.github.io/CloudTrail-Incident-Explainer/](https://michaelw2390.github.io/CloudTrail-Incident-Explainer/)
 
 CloudTrail Incident Explainer
 A web app that analyzes AWS CloudTrail logs to detect suspicious activity and reconstruct an attack timeline.
