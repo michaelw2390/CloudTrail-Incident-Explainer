@@ -6,17 +6,23 @@
   <title>CloudTrail Incident Explainer</title>
   <style>
     :root {
-      --bg: #f3f6fb;
-      --panel: #ffffff;
-      --panel-alt: #f8fafc;
+      --bg: #edf2f8;
+      --panel: rgba(255, 255, 255, 0.92);
+      --panel-alt: #f7f9fc;
       --text: #142033;
-      --muted: #5f6f85;
-      --border: #d8e1ec;
-      --accent: #0b57d0;
-      --accent-dark: #0842a0;
+      --muted: #5c6d82;
+      --border: #d5deea;
+      --accent: #0f5fd7;
+      --accent-dark: #0a469f;
+      --accent-soft: rgba(15, 95, 215, 0.12);
       --danger: #b42318;
-      --shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-      --radius: 18px;
+      --danger-soft: #fef3f2;
+      --warning: #b54708;
+      --warning-soft: #fffaeb;
+      --success: #027a48;
+      --success-soft: #ecfdf3;
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.10);
+      --radius: 20px;
     }
 
     * {
@@ -27,22 +33,26 @@
       margin: 0;
       font-family: "Segoe UI", Arial, sans-serif;
       background:
-        radial-gradient(circle at top right, rgba(11, 87, 208, 0.08), transparent 28%),
+        radial-gradient(circle at top left, rgba(15, 95, 215, 0.14), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(2, 122, 72, 0.08), transparent 28%),
         linear-gradient(180deg, #eef4fb 0%, var(--bg) 100%);
       color: var(--text);
     }
 
     .shell {
-      width: min(1100px, calc(100% - 32px));
-      margin: 48px auto;
+      width: min(1180px, calc(100% - 32px));
+      margin: 40px auto 60px;
     }
 
     .hero,
-    .results-grid article {
+    .results-grid article,
+    .summary-strip,
+    .details-panel {
       background: var(--panel);
-      border: 1px solid rgba(216, 225, 236, 0.9);
+      border: 1px solid rgba(213, 222, 234, 0.92);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
 
     .hero {
@@ -55,34 +65,42 @@
       gap: 8px;
       padding: 8px 12px;
       border-radius: 999px;
-      background: rgba(11, 87, 208, 0.08);
+      background: var(--accent-soft);
       color: var(--accent);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
     }
 
     h1 {
       margin: 18px 0 12px;
-      font-size: clamp(2rem, 4vw, 3.4rem);
-      line-height: 1.05;
+      font-size: clamp(2.2rem, 4.2vw, 3.7rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
     }
 
     .hero p {
       margin: 0;
-      max-width: 760px;
+      max-width: 780px;
       color: var(--muted);
-      font-size: 1.05rem;
-      line-height: 1.6;
+      font-size: 1.02rem;
+      line-height: 1.7;
     }
 
     .workspace {
-      margin-top: 24px;
+      margin-top: 28px;
       padding: 24px;
-      border-radius: calc(var(--radius) - 4px);
-      background: var(--panel-alt);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(247, 249, 252, 0.94));
       border: 1px solid var(--border);
+    }
+
+    .input-hint {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.5;
     }
 
     label {
@@ -98,23 +116,24 @@
       resize: vertical;
       padding: 18px;
       border-radius: 14px;
-      border: 1px solid #c5d3e3;
+      border: 1px solid #c4d0df;
       outline: none;
       background: #fff;
       color: var(--text);
-      font: 0.95rem/1.5 Consolas, "Courier New", monospace;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      font: 0.95rem/1.55 Consolas, "Courier New", monospace;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
 
     textarea:focus {
-      border-color: rgba(11, 87, 208, 0.8);
-      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.12);
+      border-color: rgba(15, 95, 215, 0.82);
+      box-shadow: 0 0 0 4px rgba(15, 95, 215, 0.12);
+      transform: translateY(-1px);
     }
 
     .actions {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       margin-top: 16px;
       flex-wrap: wrap;
     }
@@ -123,18 +142,30 @@
       border: 0;
       border-radius: 12px;
       padding: 14px 22px;
-      background: linear-gradient(135deg, var(--accent), #2b72df);
       color: #fff;
       font-size: 0.98rem;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      box-shadow: 0 14px 30px rgba(11, 87, 208, 0.2);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
     }
 
     button:hover {
       transform: translateY(-1px);
-      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, var(--accent), #2b72df);
+      box-shadow: 0 14px 30px rgba(15, 95, 215, 0.20);
+    }
+
+    .secondary-button {
+      background: linear-gradient(135deg, #49627f, #6b8199);
+      box-shadow: 0 14px 30px rgba(73, 98, 127, 0.15);
+    }
+
+    .danger-button {
+      background: linear-gradient(135deg, #7a2230, #a13843);
+      box-shadow: 0 14px 30px rgba(122, 34, 48, 0.15);
     }
 
     .status {
@@ -147,6 +178,63 @@
       color: var(--danger);
     }
 
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+      padding: 18px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 249, 252, 0.98));
+      border: 1px solid var(--border);
+    }
+
+    .metric-label {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .metric-value {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .metric-value.severity-high,
+    .summary-badge.high {
+      color: var(--danger);
+    }
+
+    .metric-value.severity-medium,
+    .summary-badge.medium {
+      color: var(--warning);
+    }
+
+    .metric-value.severity-low,
+    .summary-badge.low {
+      color: var(--success);
+    }
+
+    .metric-value.severity-none {
+      color: var(--muted);
+    }
+
+    .metric-subtext {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
     .results-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -154,42 +242,239 @@
       margin-top: 24px;
     }
 
-    .results-grid article {
+    .incident-summary {
+      margin-top: 24px;
+      padding: 22px 24px;
+      background: var(--panel);
+      border: 1px solid rgba(213, 222, 234, 0.92);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .incident-summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .incident-summary-title {
+      margin: 0;
+      font-size: 1.12rem;
+      font-weight: 800;
+    }
+
+    .incident-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .incident-summary-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+    }
+
+    .incident-summary-label {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .incident-summary-value {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .incident-summary-value.summary-text {
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .completion-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(15, 95, 215, 0.08);
+      color: var(--accent-dark);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .results-grid article,
+    .details-panel {
       padding: 24px;
       min-height: 220px;
     }
 
-    h2 {
+    .details-panel {
+      margin-top: 20px;
+    }
+
+    .site-footer {
+      margin-top: 24px;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    h2,
+    h3 {
       margin: 0 0 12px;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
     }
 
     .section-copy {
       margin: 0;
       color: var(--muted);
-      line-height: 1.7;
+      line-height: 1.72;
       white-space: pre-wrap;
     }
 
     .placeholder {
-      color: #7d8ca3;
+      color: #8090a7;
       font-style: italic;
     }
 
-    @media (max-width: 800px) {
+    .event-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .event-card {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+      padding: 16px;
+    }
+
+    .event-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .event-card-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.high {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid rgba(180, 35, 24, 0.18);
+    }
+
+    .badge.medium {
+      color: var(--warning);
+      background: var(--warning-soft);
+      border: 1px solid rgba(181, 71, 8, 0.18);
+    }
+
+    .badge.low {
+      color: var(--success);
+      background: var(--success-soft);
+      border: 1px solid rgba(2, 122, 72, 0.18);
+    }
+
+    .event-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .event-detail-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .event-detail-block {
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #f9fbfd;
+      border: 1px solid var(--border);
+    }
+
+    .event-detail-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .event-detail-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 960px) {
+      .summary-strip,
+      .incident-summary-grid,
+      .results-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
       .shell {
-        width: min(100% - 20px, 1100px);
-        margin: 20px auto 32px;
+        width: min(100% - 20px, 1180px);
+        margin: 18px auto 30px;
       }
 
       .hero,
+      .workspace,
+      .summary-strip,
+      .incident-summary,
       .results-grid article,
-      .workspace {
+      .details-panel {
         padding: 20px;
       }
 
+      .summary-strip,
+      .incident-summary-grid,
       .results-grid {
         grid-template-columns: 1fr;
+      }
+
+      .event-card-header {
+        flex-direction: column;
       }
     }
   </style>
@@ -200,27 +485,75 @@
       <div class="eyebrow">AWS Security Triage</div>
       <h1>CloudTrail Incident Explainer</h1>
       <p>
-        Paste AWS CloudTrail JSON to quickly organize notable activity into suspicious events,
-        a readable timeline, an analyst-style explanation, and practical next steps for response.
+        Analyze AWS CloudTrail logs to detect suspicious activity, reconstruct incident timelines,
+        and generate analyst-style explanations.
       </p>
 
       <div class="workspace">
         <label for="cloudtrail-input">CloudTrail JSON</label>
+        <p class="input-hint">Paste AWS CloudTrail JSON or load a sample to begin analysis.</p>
         <textarea id="cloudtrail-input" placeholder='Paste AWS CloudTrail JSON here, for example: { "Records": [ ... ] }'></textarea>
         <div class="actions">
-          <button id="analyze-button" type="button">Analyze Incident</button>
+          <button id="analyze-button" class="primary-button" type="button">Analyze Incident</button>
+          <button id="benign-sample-button" class="secondary-button" type="button">Load Benign Sample</button>
+          <button id="suspicious-sample-button" class="secondary-button" type="button">Load Suspicious Sample</button>
+          <button id="clear-button" class="danger-button" type="button">Clear Results</button>
           <div id="status" class="status"></div>
         </div>
       </div>
     </section>
 
+    <section class="summary-strip">
+      <article class="metric">
+        <p class="metric-label">Events Parsed</p>
+        <p id="metric-total-events" class="metric-value">0</p>
+        <div class="metric-subtext">Total records found in the pasted CloudTrail payload.</div>
+      </article>
+      <article class="metric">
+        <p class="metric-label">Findings</p>
+        <p id="metric-findings" class="metric-value">0</p>
+        <div class="metric-subtext">Notable events flagged by built-in incident heuristics.</div>
+      </article>
+      <article class="metric">
+        <p class="metric-label">Highest Risk</p>
+        <p id="metric-severity" class="metric-value severity-none">None</p>
+        <div class="metric-subtext">Overall severity based on the most sensitive detected action.</div>
+      </article>
+      <article class="metric">
+        <p class="metric-label">Primary Actor</p>
+        <p id="metric-actor" class="metric-value">Unknown</p>
+        <div class="metric-subtext">Most frequent principal across the incident sequence.</div>
+      </article>
+    </section>
+
+    <section class="incident-summary">
+      <div class="incident-summary-header">
+        <h2 class="incident-summary-title">Incident Summary</h2>
+        <div id="completion-banner" class="completion-banner">Awaiting analysis</div>
+      </div>
+      <div class="incident-summary-grid">
+        <article class="incident-summary-card">
+          <p class="incident-summary-label">Overall Severity</p>
+          <p id="summary-overall-severity" class="incident-summary-value severity-none">NONE</p>
+        </article>
+        <article class="incident-summary-card">
+          <p class="incident-summary-label">Findings Detected</p>
+          <p id="summary-total-findings" class="incident-summary-value">0</p>
+        </article>
+        <article class="incident-summary-card">
+          <p class="incident-summary-label">Primary Concern</p>
+          <p id="summary-primary-concern" class="incident-summary-value summary-text">No incident pattern identified yet.</p>
+        </article>
+      </div>
+    </section>
+
     <section class="results-grid">
       <article>
-        <h2>Suspicious Events</h2>
+        <h2>Detected Security Events</h2>
         <p id="suspicious-events" class="section-copy placeholder">No analysis yet.</p>
       </article>
       <article>
-        <h2>Attack Timeline</h2>
+        <h2>Incident Timeline</h2>
         <p id="attack-timeline" class="section-copy placeholder">No analysis yet.</p>
       </article>
       <article>
@@ -228,31 +561,197 @@
         <p id="ai-explanation" class="section-copy placeholder">No analysis yet.</p>
       </article>
       <article>
-        <h2>Recommended Next Steps</h2>
+        <h2>Recommended Response Actions</h2>
         <p id="next-steps" class="section-copy placeholder">No analysis yet.</p>
       </article>
     </section>
+
+    <section class="details-panel">
+      <h3>Detected Security Events</h3>
+      <p id="event-card-empty" class="section-copy placeholder">No suspicious findings to display.</p>
+      <div id="event-cards" class="event-list" aria-live="polite"></div>
+    </section>
+
+    <footer class="site-footer">
+      Built as a cybersecurity portfolio project focused on cloud threat detection and incident analysis.
+    </footer>
   </main>
 
   <script>
     const input = document.getElementById("cloudtrail-input");
     const button = document.getElementById("analyze-button");
+    const benignSampleButton = document.getElementById("benign-sample-button");
+    const suspiciousSampleButton = document.getElementById("suspicious-sample-button");
+    const clearButton = document.getElementById("clear-button");
     const status = document.getElementById("status");
     const suspiciousEvents = document.getElementById("suspicious-events");
     const attackTimeline = document.getElementById("attack-timeline");
     const aiExplanation = document.getElementById("ai-explanation");
     const nextSteps = document.getElementById("next-steps");
+    const eventCards = document.getElementById("event-cards");
+    const eventCardEmpty = document.getElementById("event-card-empty");
+    const totalEventsMetric = document.getElementById("metric-total-events");
+    const findingsMetric = document.getElementById("metric-findings");
+    const severityMetric = document.getElementById("metric-severity");
+    const actorMetric = document.getElementById("metric-actor");
+    const summaryOverallSeverity = document.getElementById("summary-overall-severity");
+    const summaryTotalFindings = document.getElementById("summary-total-findings");
+    const summaryPrimaryConcern = document.getElementById("summary-primary-concern");
+    const completionBanner = document.getElementById("completion-banner");
 
-    function setSection(element, content) {
+    const suspiciousSamplePayload = {
+      Records: [
+        {
+          eventTime: "2026-04-17T18:01:15Z",
+          eventName: "ConsoleLogin",
+          eventSource: "signin.amazonaws.com",
+          sourceIPAddress: "198.51.100.12",
+          awsRegion: "us-east-1",
+          userAgent: "Mozilla/5.0",
+          responseElements: { ConsoleLogin: "Success" },
+          additionalEventData: { MFAUsed: "No" },
+          userIdentity: {
+            type: "IAMUser",
+            userName: "ops-admin",
+            arn: "arn:aws:iam::123456789012:user/ops-admin"
+          }
+        },
+        {
+          eventTime: "2026-04-17T18:05:42Z",
+          eventName: "CreateAccessKey",
+          eventSource: "iam.amazonaws.com",
+          sourceIPAddress: "198.51.100.12",
+          awsRegion: "us-east-1",
+          userAgent: "aws-cli/2.15",
+          requestParameters: { userName: "ops-admin" },
+          userIdentity: {
+            type: "IAMUser",
+            userName: "ops-admin",
+            arn: "arn:aws:iam::123456789012:user/ops-admin"
+          }
+        },
+        {
+          eventTime: "2026-04-17T18:08:09Z",
+          eventName: "AuthorizeSecurityGroupIngress",
+          eventSource: "ec2.amazonaws.com",
+          sourceIPAddress: "198.51.100.12",
+          awsRegion: "us-east-1",
+          requestParameters: {
+            groupId: "sg-01example",
+            ipPermissions: {
+              items: [
+                {
+                  fromPort: 22,
+                  toPort: 22,
+                  ipProtocol: "tcp",
+                  ipRanges: {
+                    items: [
+                      { cidrIp: "0.0.0.0/0" }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          userIdentity: {
+            type: "IAMUser",
+            userName: "ops-admin",
+            arn: "arn:aws:iam::123456789012:user/ops-admin"
+          }
+        },
+        {
+          eventTime: "2026-04-17T18:10:11Z",
+          eventName: "StopLogging",
+          eventSource: "cloudtrail.amazonaws.com",
+          sourceIPAddress: "198.51.100.12",
+          awsRegion: "us-east-1",
+          userIdentity: {
+            type: "IAMUser",
+            userName: "ops-admin",
+            arn: "arn:aws:iam::123456789012:user/ops-admin"
+          }
+        }
+      ]
+    };
+
+    const benignSamplePayload = {
+      Records: [
+        {
+          eventTime: "2026-04-17T16:12:10Z",
+          eventName: "DescribeInstances",
+          eventSource: "ec2.amazonaws.com",
+          sourceIPAddress: "203.0.113.44",
+          awsRegion: "us-east-1",
+          userAgent: "aws-cli/2.15",
+          userIdentity: {
+            type: "IAMUser",
+            userName: "cloud-ops",
+            arn: "arn:aws:iam::123456789012:user/cloud-ops"
+          }
+        },
+        {
+          eventTime: "2026-04-17T16:15:32Z",
+          eventName: "ListBuckets",
+          eventSource: "s3.amazonaws.com",
+          sourceIPAddress: "203.0.113.44",
+          awsRegion: "us-east-1",
+          userAgent: "aws-cli/2.15",
+          userIdentity: {
+            type: "IAMUser",
+            userName: "cloud-ops",
+            arn: "arn:aws:iam::123456789012:user/cloud-ops"
+          }
+        }
+      ]
+    };
+
+    const severityOrder = { High: 3, Medium: 2, Low: 1, None: 0 };
+
+    function setSection(element, content, emptyLabel = "No analysis yet.") {
       element.textContent = content;
-      element.classList.toggle("placeholder", content === "No analysis yet.");
+      element.classList.toggle("placeholder", content === emptyLabel);
+    }
+
+    function setMetric(element, content) {
+      element.textContent = content;
+    }
+
+    function setSeverityMetric(severity) {
+      severityMetric.textContent = severity;
+      severityMetric.className = "metric-value";
+      severityMetric.classList.add(`severity-${String(severity).toLowerCase()}`);
+    }
+
+    function setSummarySeverity(severity) {
+      summaryOverallSeverity.textContent = String(severity).toUpperCase();
+      summaryOverallSeverity.className = "incident-summary-value";
+      summaryOverallSeverity.classList.add(`severity-${String(severity).toLowerCase()}`);
+    }
+
+    function resetMetrics() {
+      setMetric(totalEventsMetric, "0");
+      setMetric(findingsMetric, "0");
+      setSeverityMetric("None");
+      setMetric(actorMetric, "Unknown");
+      setSummarySeverity("None");
+      setMetric(summaryTotalFindings, "0");
+      setMetric(summaryPrimaryConcern, "No incident pattern identified yet.");
+      completionBanner.textContent = "Awaiting analysis";
+    }
+
+    function resetCards() {
+      eventCards.innerHTML = "";
+      eventCardEmpty.textContent = "No suspicious findings to display.";
+      eventCardEmpty.classList.add("placeholder");
     }
 
     function resetSections() {
       setSection(suspiciousEvents, "No analysis yet.");
       setSection(attackTimeline, "No analysis yet.");
-      setSection(aiExplanation, "AI features are not enabled yet.");
+      setSection(aiExplanation, "No analysis yet.");
       setSection(nextSteps, "No analysis yet.");
+      resetMetrics();
+      resetCards();
     }
 
     function normalizeEvents(payload) {
@@ -300,21 +799,8 @@
       return date && !Number.isNaN(date.valueOf()) ? date : null;
     }
 
-    function summarizeEvent(record) {
-      const eventName = record.eventName || record.EventName || "UnknownEvent";
-      const source = record.eventSource || record.EventSource || "unknown-source";
-      const user = getUserIdentity(record);
-      const region = record.awsRegion || record.region || "unknown region";
-      return `${eventName} from ${source} by ${user} in ${region}`;
-    }
-
     function getEventName(record) {
       return record.eventName || record.EventName || "UnknownEvent";
-    }
-
-    function getEventTimeLabel(record) {
-      const parsedTime = parseTime(record);
-      return parsedTime ? parsedTime.toLocaleString() : "Unknown time";
     }
 
     function getUserIdentity(record) {
@@ -324,6 +810,23 @@
         record.username ||
         record.userName ||
         "unknown principal";
+    }
+
+    function getSourceIp(record) {
+      return record.sourceIPAddress || record.sourceIpAddress || "unknown IP";
+    }
+
+    function getEventSource(record) {
+      return record.eventSource || record.EventSource || "unknown-source";
+    }
+
+    function getRegion(record) {
+      return record.awsRegion || record.region || "unknown region";
+    }
+
+    function getEventTimeLabel(record) {
+      const parsedTime = parseTime(record);
+      return parsedTime ? parsedTime.toLocaleString() : "Unknown time";
     }
 
     function hasOpenIngress(record) {
@@ -339,42 +842,115 @@
       });
     }
 
+    function isRootActivity(record) {
+      return record.userIdentity?.type === "Root" || getUserIdentity(record).includes(":root");
+    }
+
+    function isConsoleLoginWithoutMfa(record) {
+      const mfa = record.additionalEventData?.MFAUsed || record.additionalEventData?.mfaUsed;
+      const loginResult = record.responseElements?.ConsoleLogin;
+      return getEventName(record) === "ConsoleLogin" && loginResult === "Success" && String(mfa).toLowerCase() === "no";
+    }
+
+    function extractAffectedResource(record) {
+      const request = record.requestParameters || {};
+      return request.groupId ||
+        request.userName ||
+        request.roleName ||
+        request.policyArn ||
+        request.instanceId ||
+        request.bucketName ||
+        request.trailName ||
+        "Resource not explicit";
+    }
+
+    function createFinding(record, severity, reason) {
+      const impact = getPotentialImpact(record, severity);
+
+      return {
+        eventName: getEventName(record),
+        severity,
+        reason,
+        whyFlagged: reason,
+        potentialImpact: impact,
+        eventTime: getEventTimeLabel(record),
+        userIdentity: getUserIdentity(record),
+        sourceIp: getSourceIp(record),
+        region: getRegion(record),
+        resource: extractAffectedResource(record)
+      };
+    }
+
+    function getPotentialImpact(record, severity) {
+      const eventName = getEventName(record);
+
+      if (eventName === "AuthorizeSecurityGroupIngress" && hasOpenIngress(record)) {
+        return "Could expose internet-reachable resources to unauthorized external access.";
+      }
+
+      if (eventName === "CreateAccessKey") {
+        return "Could provide persistent API access that survives a console session or is used from another host.";
+      }
+
+      if (eventName === "StopLogging" || eventName === "DeleteTrail") {
+        return "Could reduce visibility, delay detection, and make incident reconstruction harder.";
+      }
+
+      if (eventName === "AttachUserPolicy" || eventName === "PutUserPolicy" || eventName === "AttachRolePolicy" || eventName === "PutRolePolicy") {
+        return "Could grant elevated permissions that enable privilege escalation or broader account control.";
+      }
+
+      if (eventName === "AssumeRole" && isRootActivity(record)) {
+        return "Could extend highly privileged access into additional roles and services.";
+      }
+
+      if (isConsoleLoginWithoutMfa(record)) {
+        return "Could indicate a weaker authentication path that is easier for an attacker to abuse.";
+      }
+
+      if (eventName === "CreateUser" || eventName === "CreateLoginProfile") {
+        return "Could establish a new identity for persistence or unauthorized console access.";
+      }
+
+      if (severity === "Low") {
+        return "Could indicate low-risk but still notable behavior that may need validation.";
+      }
+
+      return "Could support unauthorized access, persistence, or defense evasion depending on surrounding activity.";
+    }
+
     function detectSuspiciousEvents(records) {
       const findings = [];
 
       records.forEach((record) => {
         const eventName = getEventName(record);
-        const eventTime = getEventTimeLabel(record);
-        const userIdentity = getUserIdentity(record);
 
         if (eventName === "AuthorizeSecurityGroupIngress" && hasOpenIngress(record)) {
-          findings.push({
-            eventName,
-            severity: "High",
-            reason: "Security group ingress opens access to 0.0.0.0/0.",
-            eventTime,
-            userIdentity
-          });
+          findings.push(createFinding(record, "High", "Security group ingress opens access to 0.0.0.0/0."));
         }
 
         if (eventName === "CreateAccessKey") {
-          findings.push({
-            eventName,
-            severity: "Medium",
-            reason: "A new access key was created and should be verified.",
-            eventTime,
-            userIdentity
-          });
+          findings.push(createFinding(record, "Medium", "A new access key was created and should be verified."));
         }
 
         if (eventName === "StopLogging" || eventName === "DeleteTrail") {
-          findings.push({
-            eventName,
-            severity: "High",
-            reason: "CloudTrail logging was disabled or a trail was deleted.",
-            eventTime,
-            userIdentity
-          });
+          findings.push(createFinding(record, "High", "CloudTrail logging was disabled or a trail was deleted."));
+        }
+
+        if (eventName === "AttachUserPolicy" || eventName === "PutUserPolicy" || eventName === "AttachRolePolicy" || eventName === "PutRolePolicy") {
+          findings.push(createFinding(record, "High", "IAM permissions were expanded and may indicate privilege escalation."));
+        }
+
+        if (eventName === "AssumeRole" && isRootActivity(record)) {
+          findings.push(createFinding(record, "High", "Root-linked activity attempted or performed a role assumption."));
+        }
+
+        if (isConsoleLoginWithoutMfa(record)) {
+          findings.push(createFinding(record, "Medium", "Console login succeeded without MFA."));
+        }
+
+        if (eventName === "CreateUser" || eventName === "CreateLoginProfile") {
+          findings.push(createFinding(record, "Medium", "A new IAM identity or console profile was created."));
         }
       });
 
@@ -390,8 +966,12 @@
         return [
           `${index + 1}. ${finding.eventName} (${finding.severity})`,
           `Reason: ${finding.reason}`,
+          `Why Flagged: ${finding.whyFlagged}`,
+          `Potential Impact: ${finding.potentialImpact}`,
           `Time: ${finding.eventTime}`,
-          `User: ${finding.userIdentity}`
+          `User: ${finding.userIdentity}`,
+          `Source IP: ${finding.sourceIp}`,
+          `Resource: ${finding.resource}`
         ].join("\n");
       }).join("\n\n");
     }
@@ -405,9 +985,167 @@
         return [
           `${index + 1}. ${getEventTimeLabel(record)}`,
           `Event: ${getEventName(record)}`,
-          `User: ${getUserIdentity(record)}`
+          `Source: ${getEventSource(record)}`,
+          `User: ${getUserIdentity(record)}`,
+          `IP: ${getSourceIp(record)}`,
+          `Region: ${getRegion(record)}`
         ].join("\n");
       }).join("\n\n");
+    }
+
+    function getHighestSeverity(findings) {
+      return findings.reduce((highest, finding) => {
+        return severityOrder[finding.severity] > severityOrder[highest] ? finding.severity : highest;
+      }, "None");
+    }
+
+    function getPrimaryConcern(findings) {
+      if (!findings.length) {
+        return "No incident pattern identified yet.";
+      }
+
+      const eventNames = [...new Set(findings.map((finding) => finding.eventName))];
+
+      if (eventNames.includes("CreateAccessKey") &&
+          eventNames.includes("AuthorizeSecurityGroupIngress") &&
+          eventNames.includes("StopLogging")) {
+        return "Credential creation followed by public exposure and logging disruption";
+      }
+
+      if (eventNames.includes("AuthorizeSecurityGroupIngress")) {
+        return "Public network exposure created through security group modification";
+      }
+
+      if (eventNames.includes("StopLogging") || eventNames.includes("DeleteTrail")) {
+        return "Logging visibility disrupted during suspicious activity";
+      }
+
+      if (eventNames.includes("CreateAccessKey")) {
+        return "New credential creation may enable persistent access";
+      }
+
+      if (eventNames.includes("AttachUserPolicy") || eventNames.includes("PutUserPolicy") ||
+          eventNames.includes("AttachRolePolicy") || eventNames.includes("PutRolePolicy")) {
+        return "Privilege escalation through IAM permission changes";
+      }
+
+      if (eventNames.includes("ConsoleLogin")) {
+        return "Potential account access with weakened authentication assurance";
+      }
+
+      return "Multiple suspicious security-relevant actions require analyst review";
+    }
+
+    function getPrimaryActor(records) {
+      const counts = {};
+
+      records.forEach((record) => {
+        const actor = getUserIdentity(record);
+        counts[actor] = (counts[actor] || 0) + 1;
+      });
+
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      return sorted.length ? sorted[0][0] : "Unknown";
+    }
+
+    function buildNarrative(records, findings) {
+      if (!records.length) {
+        return "No CloudTrail events were available to explain.";
+      }
+
+      const primaryActor = getPrimaryActor(records);
+      const highestSeverity = getHighestSeverity(findings);
+      const firstRecord = records[0];
+      const lastRecord = records[records.length - 1];
+      const uniqueIps = [...new Set(records.map(getSourceIp))].filter(Boolean);
+      const notableActions = [...new Set(findings.map((finding) => finding.eventName))];
+
+      const summarySentence = findings.length
+        ? `This sequence looks ${highestSeverity === "High" ? "highly suspicious" : "worthy of investigation"} because it contains ${findings.length} flagged event(s), including ${notableActions.join(", ")}.`
+        : "No built-in detection rule fired, but the activity still deserves review in context.";
+
+      const actorSentence = `The primary actor appears to be ${primaryActor}, active between ${getEventTimeLabel(firstRecord)} and ${getEventTimeLabel(lastRecord)}.`;
+      const networkSentence = `Observed source IP coverage includes ${uniqueIps.join(", ")}.`;
+
+      let sequenceSentence = "The event flow does not yet suggest a clear intrusion progression.";
+      if (findings.length >= 2) {
+        sequenceSentence = "The event order suggests a progression from access, to capability expansion, to reduced visibility or broader exposure.";
+      } else if (findings.length === 1) {
+        sequenceSentence = "The flagged action appears isolated so far, which makes actor validation and change confirmation especially important.";
+      }
+
+      return [summarySentence, actorSentence, networkSentence, sequenceSentence].join("\n\n");
+    }
+
+    function buildNextSteps(records, findings) {
+      const nextStepsList = [
+        "Validate whether the actor, source IP, and user agent align with approved administrator activity.",
+        "Review IAM changes, access key creation, and role assumptions around the flagged timestamps.",
+        "Check related AWS services for follow-on actions from the same identity or IP address.",
+        "Preserve CloudTrail, VPC Flow Logs, and endpoint telemetry before making containment changes."
+      ];
+
+      if (findings.some((finding) => finding.eventName === "CreateAccessKey")) {
+        nextStepsList.unshift("Rotate or disable newly created access keys if the change cannot be immediately verified.");
+      }
+
+      if (findings.some((finding) => finding.eventName === "AuthorizeSecurityGroupIngress")) {
+        nextStepsList.unshift("Review exposed security group rules and remove any unexpected 0.0.0.0/0 ingress.");
+      }
+
+      if (findings.some((finding) => finding.eventName === "StopLogging" || finding.eventName === "DeleteTrail")) {
+        nextStepsList.unshift("Re-enable logging controls and confirm log delivery to a protected destination.");
+      }
+
+      if (!records.length) {
+        return "No next steps available.";
+      }
+
+      return nextStepsList.map((step, index) => `${index + 1}. ${step}`).join("\n");
+    }
+
+    function renderEventCards(findings) {
+      eventCards.innerHTML = "";
+
+      if (!findings.length) {
+        eventCardEmpty.textContent = "No suspicious findings to display.";
+        eventCardEmpty.classList.add("placeholder");
+        return;
+      }
+
+      eventCardEmpty.textContent = "";
+      eventCardEmpty.classList.remove("placeholder");
+
+      findings.forEach((finding) => {
+        const card = document.createElement("article");
+        card.className = "event-card";
+
+        const badgeClass = finding.severity.toLowerCase();
+        card.innerHTML = `
+          <div class="event-card-header">
+            <p class="event-card-title">${finding.eventName}</p>
+            <span class="badge ${badgeClass}">${finding.severity}</span>
+          </div>
+          <p class="event-meta">Reason: ${finding.reason}
+Time: ${finding.eventTime}
+User: ${finding.userIdentity}
+Source IP: ${finding.sourceIp}
+Region: ${finding.region}
+Resource: ${finding.resource}</p>
+          <div class="event-detail-grid">
+            <div class="event-detail-block">
+              <span class="event-detail-label">Why Flagged</span>
+              <p class="event-detail-copy">${finding.whyFlagged}</p>
+            </div>
+            <div class="event-detail-block">
+              <span class="event-detail-label">Potential Impact</span>
+              <p class="event-detail-copy">${finding.potentialImpact}</p>
+            </div>
+          </div>
+        `;
+
+        eventCards.appendChild(card);
+      });
     }
 
     function analyzeRecords(records) {
@@ -418,27 +1156,65 @@
           const bTime = b.time ? b.time.valueOf() : Number.MAX_SAFE_INTEGER;
           return aTime - bTime;
         });
+
       const orderedRecords = enriched.map(({ record }) => record);
       const findings = detectSuspiciousEvents(orderedRecords);
-      const suspiciousText = formatFindings(findings);
-      const timelineText = formatTimeline(orderedRecords);
-
-      const nextStepsText = [
-        "Validate the identity that initiated the most sensitive actions and confirm whether the activity was expected.",
-        "Review IAM policy, access key, and role changes around the suspicious timestamps.",
-        "Correlate the source IPs and user agents with known administrator activity or endpoint telemetry.",
-        "If compromise is suspected, rotate credentials, preserve logs, and scope related activity across affected AWS services."
-      ].join("\n");
 
       return {
         findings,
-        suspiciousText,
-        timelineText,
-        nextStepsText
+        suspiciousText: formatFindings(findings),
+        timelineText: formatTimeline(orderedRecords),
+        explanationText: buildNarrative(orderedRecords, findings),
+        nextStepsText: buildNextSteps(orderedRecords, findings),
+        totalEvents: orderedRecords.length,
+        highestSeverity: getHighestSeverity(findings),
+        primaryActor: getPrimaryActor(orderedRecords),
+        primaryConcern: getPrimaryConcern(findings)
       };
     }
 
+    function runAnalysis(rawInput) {
+      const parsed = JSON.parse(rawInput);
+      const records = normalizeEvents(parsed);
+      validateEvents(records);
+
+      const results = analyzeRecords(records);
+      setSection(suspiciousEvents, results.suspiciousText, "No suspicious events detected.");
+      setSection(attackTimeline, results.timelineText);
+      setSection(aiExplanation, results.explanationText);
+      setSection(nextSteps, results.nextStepsText);
+      setMetric(totalEventsMetric, String(results.totalEvents));
+      setMetric(findingsMetric, String(results.findings.length));
+      setSeverityMetric(results.highestSeverity);
+      setMetric(actorMetric, results.primaryActor);
+      setSummarySeverity(results.highestSeverity);
+      setMetric(summaryTotalFindings, String(results.findings.length));
+      setMetric(summaryPrimaryConcern, results.primaryConcern);
+      completionBanner.textContent = `Analysis Complete — ${results.totalEvents} Events Processed, ${results.findings.length} Security Findings Detected`;
+      renderEventCards(results.findings);
+      return results;
+    }
+
     resetSections();
+
+    benignSampleButton.addEventListener("click", () => {
+      input.value = JSON.stringify(benignSamplePayload, null, 2);
+      status.textContent = "Benign CloudTrail sample loaded. Run analysis to inspect normal activity.";
+      status.className = "status";
+    });
+
+    suspiciousSampleButton.addEventListener("click", () => {
+      input.value = JSON.stringify(suspiciousSamplePayload, null, 2);
+      status.textContent = "Suspicious CloudTrail sample loaded. Run analysis to inspect the attack sequence.";
+      status.className = "status";
+    });
+
+    clearButton.addEventListener("click", () => {
+      input.value = "";
+      resetSections();
+      status.textContent = "Results cleared.";
+      status.className = "status";
+    });
 
     button.addEventListener("click", () => {
       const raw = input.value.trim();
@@ -451,17 +1227,8 @@
       }
 
       try {
-        const parsed = JSON.parse(raw);
-        const records = normalizeEvents(parsed);
-        validateEvents(records);
-
-        const results = analyzeRecords(records);
-        setSection(suspiciousEvents, results.suspiciousText);
-        setSection(attackTimeline, results.timelineText);
-        setSection(aiExplanation, "AI features are not enabled yet.");
-        setSection(nextSteps, results.nextStepsText);
-
-        status.textContent = `Analysis complete for ${records.length} event(s).`;
+        const results = runAnalysis(raw);
+        status.textContent = `Analysis complete for ${results.totalEvents} event(s) with ${results.findings.length} finding(s).`;
         status.className = "status";
       } catch (error) {
         resetSections();
